@@ -347,7 +347,18 @@ resource "aws_iam_policy" "api_lambda_policy" {
         ]
 
         Resource = module.storage_bucket.bucket_arn
-      }
+      },
+
+      {
+        "Sid": "CognitoLookup",
+        "Effect": "Allow",
+
+        "Action": [
+          "cognito-idp:ListUsers"
+        ],
+        
+        "Resource": module.cognito.user_pool_arn
+      }      
 
     ]
   })
