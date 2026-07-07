@@ -133,3 +133,37 @@ def get_document_permission(table, document_id, user):
         "document": document,
         "share": share,
     }
+
+
+def ensure_admin_subscription(user, cognito, sns, user_pool_id, topic_arn):
+
+    response = cognito.admin_get_user(
+        UserPoolId=user_pool_id,
+        Username=user["userId"],
+    )
+
+    attributes = {
+        attribute["Name"]: attribute["Value"]
+        for attribute in response["UserAttributes"]
+    }
+
+    email = attributes["email"]
+
+    paginator = sns.get_paginator("list_subscriptions_by_topic")
+
+    for page in paginator.paginate(
+        TopicArn=topic_arn,
+    ):
+
+        for subscription in page["Subscriptions"]:
+
+            if subscription["Endpoint"] == email:
+                return True
+
+    sns.subscribe(
+        TopicArn=topic_arn,
+        Protocol="email",
+        Endpoint=email,
+    )
+
+    return False

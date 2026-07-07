@@ -15,6 +15,7 @@ from helpers import (
     get_current_timestamp,
     get_expiry_timestamp,
     get_document_permission,
+    ensure_admin_subscription,
 )
 
 import logging
@@ -27,11 +28,13 @@ TABLE_NAME = os.environ["TABLE_NAME"]
 BUCKET_NAME = os.environ["BUCKET_NAME"]
 UPLOAD_QUEUE_URL = os.environ["UPLOAD_QUEUE_URL"]
 USER_POOL_ID = os.environ["USER_POOL_ID"]
+SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
 s3 = boto3.client("s3")
 sqs = boto3.client("sqs")
+sns = boto3.client("sns")
 cognito = boto3.client("cognito-idp")
 
 
@@ -1751,6 +1754,25 @@ def get_admin_statistics(event):
                 status_code=403,
             )
 
+        exists = ensure_admin_subscription(
+            user=user,
+            cognito=cognito,
+            sns=sns,
+            user_pool_id=USER_POOL_ID,
+            topic_arn=SNS_TOPIC_ARN,
+        )
+
+        if not exists:
+            logger.warning(
+                "SNS Topic Subscription created for Admin User %s.",
+                user["userId"],
+            )
+
+            return error(
+                "Admin user does not have an active subscription to the SNS topic.",
+                status_code=403,
+            )
+
         logger.info("Retrieving admin statistics.")
 
         # ---------- Total Documents ----------
@@ -1840,6 +1862,25 @@ def get_admin_documents(event):
                 status_code=403,
             )
 
+        exists = ensure_admin_subscription(
+            user=user,
+            cognito=cognito,
+            sns=sns,
+            user_pool_id=USER_POOL_ID,
+            topic_arn=SNS_TOPIC_ARN,
+        )
+
+        if not exists:
+            logger.warning(
+                "SNS Topic Subscription created for Admin User %s.",
+                user["userId"],
+            )
+
+            return error(
+                "Admin user does not have an active subscription to the SNS topic.",
+                status_code=403,
+            )
+
         logger.info("Retrieving all documents for admin.")
 
         response = table.query(
@@ -1889,6 +1930,25 @@ def get_admin_processing(event):
 
             return error(
                 "Access denied.",
+                status_code=403,
+            )
+
+        exists = ensure_admin_subscription(
+            user=user,
+            cognito=cognito,
+            sns=sns,
+            user_pool_id=USER_POOL_ID,
+            topic_arn=SNS_TOPIC_ARN,
+        )
+
+        if not exists:
+            logger.warning(
+                "SNS Topic Subscription created for Admin User %s.",
+                user["userId"],
+            )
+
+            return error(
+                "Admin user does not have an active subscription to the SNS topic.",
                 status_code=403,
             )
 

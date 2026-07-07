@@ -311,6 +311,17 @@ resource "aws_iam_policy" "api_lambda_policy" {
       },
 
       {
+        "Effect": "Allow",
+
+        "Action": [
+          "sns:ListSubscriptionsByTopic",
+          "sns:Subscribe"
+        ],
+
+        "Resource": module.notifications_topic.topic_arn
+      },      
+
+      {
         Sid    = "DatabaseActions"
         Effect = "Allow"
 
