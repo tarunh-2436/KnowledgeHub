@@ -379,6 +379,8 @@ module "api_lambda" {
 
     STORAGE_BUCKET = module.storage_bucket.bucket_name
 
+    UPLOAD_QUEUE_URL = module.upload_queue.queue_url
+
     USER_POOL_ID = module.cognito.user_pool_id
 
     USER_POOL_CLIENT_ID = module.cognito.client_id
