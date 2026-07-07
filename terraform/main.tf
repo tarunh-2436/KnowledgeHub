@@ -122,22 +122,6 @@ module "storage_bucket" {
   tags = local.tags
 }
 
-resource "aws_s3_bucket_notification" "storage_bucket_notification" {
-
-  bucket = module.storage_bucket.bucket_id
-
-  queue {
-
-    queue_arn = module.upload_queue.queue_arn
-
-    events = [
-      "s3:ObjectCreated:*"
-    ]
-
-  }
-
-}
-
 ###############################################################################
 # Log Archive Bucket
 ###############################################################################
@@ -234,48 +218,6 @@ module "upload_queue" {
   tags = local.tags
 }
 
-resource "aws_sqs_queue_policy" "upload_queue_policy" {
-
-  queue_url = module.upload_queue.queue_url
-
-  policy = jsonencode({
-
-    Version = "2012-10-17"
-
-    Statement = [
-
-      {
-
-        Sid = "AllowS3Bucket"
-
-        Effect = "Allow"
-
-        Principal = {
-          Service = "s3.amazonaws.com"
-        }
-
-        Action = "sqs:SendMessage"
-
-        Resource = module.upload_queue.queue_arn
-
-        Condition = {
-
-          ArnEquals = {
-
-            "aws:SourceArn" = module.storage_bucket.bucket_arn
-
-          }
-
-        }
-
-      }
-
-    ]
-
-  })
-
-}
-
 resource "aws_lambda_event_source_mapping" "upload_queue_mapping" {
 
   event_source_arn = module.upload_queue.queue_arn
@@ -355,6 +297,17 @@ resource "aws_iam_policy" "api_lambda_policy" {
         ]
 
         Resource = "arn:aws:logs:*:*:*"
+      },
+
+      {
+        Sid    = "UploadQueue"
+        Effect = "Allow"
+
+        Action = [
+          "sqs:SendMessage",
+        ]
+
+        Resource = module.upload_queue.queue_arn
       },
 
       {
@@ -762,7 +715,9 @@ locals {
 
   api_routes = [
 
-    "POST /documents",
+    "POST /documents/init",
+
+    "POST /documents/complete",
 
     "GET /documents",
 
@@ -774,7 +729,9 @@ locals {
 
     "DELETE /documents/{documentId}",
 
-    "POST /documents/{documentId}/versions",
+    "POST /documents/{documentId}/versions/init",
+
+    "POST /documents/{documentId}/versions/complete",
 
     "GET /documents/{documentId}/versions",
 
