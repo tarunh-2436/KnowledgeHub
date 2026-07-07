@@ -769,8 +769,6 @@ locals {
 
     "DELETE /documents/{documentId}/shares/{userId}",
 
-    "GET /documents/{documentId}/audit",
-
     "GET /admin/statistics",
 
     "GET /admin/documents",
