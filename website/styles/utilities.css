@@ -1,0 +1,71 @@
+.muted {
+  color: var(--text-muted);
+}
+
+.subtle {
+  color: var(--text-subtle);
+}
+
+.text-right {
+  text-align: right;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.stack-lg {
+  display: grid;
+  gap: 18px;
+}
+
+.cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.push-right {
+  margin-left: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.break-word {
+  overflow-wrap: anywhere;
+}
+
+.mt-0 {
+  margin-top: 0;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.surface-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.fade-in {
+  animation: fade-in 180ms ease both;
+}
+
+.slide-up {
+  animation: slide-up 220ms ease both;
+}

@@ -1,0 +1,68 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  color-scheme: light;
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --bg: #f4f6f9;
+  --bg-accent: #e7eef9;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-2: #f1f4f8;
+  --surface-3: #e7ebf2;
+  --surface-contrast: #ffffff;
+  --text: #101a2c;
+  --text-muted: #5d6b84;
+  --text-subtle: #78839a;
+  --border: #dbe2eb;
+  --border-strong: #c7cfdb;
+  --primary: #2457e0;
+  --primary-strong: #183ea2;
+  --primary-soft: #e7eeff;
+  --success: #0f8a5f;
+  --success-soft: #e2f7ef;
+  --warning: #a86300;
+  --warning-soft: #fff2d6;
+  --danger: #c73445;
+  --danger-soft: #ffe7ea;
+  --info: #167ea1;
+  --info-soft: #dff5fb;
+  --shadow-sm: 0 1px 2px rgba(16, 26, 44, 0.06);
+  --shadow-md: 0 18px 45px rgba(16, 26, 44, 0.12);
+  --shadow-lg: 0 28px 68px rgba(16, 26, 44, 0.18);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --sidebar-width: 286px;
+  --topbar-height: 72px;
+  --focus: 0 0 0 3px rgba(36, 87, 224, 0.18);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1116;
+  --bg-accent: #121826;
+  --surface: rgba(23, 27, 35, 0.94);
+  --surface-2: #1c212b;
+  --surface-3: #262c38;
+  --surface-contrast: #131720;
+  --text: #f3f6fb;
+  --text-muted: #a9b4c6;
+  --text-subtle: #8690a1;
+  --border: #2f3645;
+  --border-strong: #41495a;
+  --primary: #84a8ff;
+  --primary-strong: #b2c8ff;
+  --primary-soft: #1c2b50;
+  --success: #5ed3a0;
+  --success-soft: #153d2d;
+  --warning: #f1b95a;
+  --warning-soft: #403016;
+  --danger: #ff7c89;
+  --danger-soft: #4a1d23;
+  --info: #66c8e4;
+  --info-soft: #143847;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 28px 72px rgba(0, 0, 0, 0.42);
+  --focus: 0 0 0 3px rgba(132, 168, 255, 0.24);
+}

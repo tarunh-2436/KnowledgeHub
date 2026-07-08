@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="KnowledgeHub is an enterprise knowledge management platform for secure document upload, sharing, versioning, search, and AI enrichment." />
+    <meta name="theme-color" content="#2457e0" />
+    <title>KnowledgeHub</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      (function () {
+        var stored = localStorage.getItem("knowledgehub.theme");
+        var theme =
+          stored ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <script src="./config.js"></script>
+    <script type="module" src="./script.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div id="app" class="app-root" aria-live="polite">
+      <section class="auth-screen" data-auth-screen>
+        <div class="auth-panel">
+          <div class="brand-lockup">
+            <span class="brand-mark" aria-hidden="true">K</span>
+            <div>
+              <p class="eyebrow">Enterprise Knowledge Management</p>
+              <h1>KnowledgeHub</h1>
+            </div>
+          </div>
+          <p class="auth-copy">
+            Sign in with your organization account to manage documents, versions,
+            sharing, and AI-enriched knowledge.
+          </p>
+          <div class="auth-actions">
+            <button class="btn btn-primary" type="button" data-action="login">
+              <span data-icon="log-in"></span>
+              Sign in with Cognito
+            </button>
+          </div>
+          <div class="auth-note" data-auth-note>
+            Secure access is provided by Amazon Cognito Hosted UI.
+          </div>
+        </div>
+      </section>
+
+      <div class="shell is-hidden" data-shell>
+        <aside class="sidebar" data-sidebar aria-label="Primary navigation">
+          <div class="sidebar-header">
+            <a class="brand" href="#dashboard" aria-label="KnowledgeHub dashboard">
+              <span class="brand-mark" aria-hidden="true">K</span>
+              <span class="brand-name">KnowledgeHub</span>
+            </a>
+            <button
+              class="icon-btn sidebar-close"
+              type="button"
+              data-action="toggle-sidebar"
+              aria-label="Close navigation"
+            >
+              <span data-icon="x"></span>
+            </button>
+          </div>
+
+          <nav class="nav-list" data-nav>
+            <a class="nav-item" href="#dashboard" data-route="dashboard">
+              <span data-icon="layout-dashboard"></span>
+              <span>Dashboard</span>
+            </a>
+            <a class="nav-item" href="#documents" data-route="documents">
+              <span data-icon="file-text"></span>
+              <span>My Documents</span>
+            </a>
+            <a class="nav-item" href="#shared" data-route="shared">
+              <span data-icon="users"></span>
+              <span>Shared Documents</span>
+            </a>
+            <a class="nav-item" href="#upload" data-route="upload">
+              <span data-icon="upload-cloud"></span>
+              <span>Upload</span>
+            </a>
+            <a class="nav-item" href="#search" data-route="search">
+              <span data-icon="search"></span>
+              <span>Search</span>
+            </a>
+            <a class="nav-item admin-only" href="#admin" data-route="admin">
+              <span data-icon="shield"></span>
+              <span>Admin</span>
+            </a>
+            <a class="nav-item" href="#settings" data-route="settings">
+              <span data-icon="settings"></span>
+              <span>Settings</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-footer">
+            <button class="nav-item nav-button" type="button" data-action="logout">
+              <span data-icon="log-out"></span>
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="mobile-scrim" data-action="toggle-sidebar" hidden></div>
+
+        <div class="workspace">
+          <header class="topbar">
+            <button
+              class="icon-btn menu-trigger"
+              type="button"
+              data-action="toggle-sidebar"
+              aria-label="Open navigation"
+            >
+              <span data-icon="menu"></span>
+            </button>
+
+            <form class="global-search" data-global-search role="search">
+              <span data-icon="search" aria-hidden="true"></span>
+              <label class="sr-only" for="global-search-input">Search documents</label>
+              <input
+                id="global-search-input"
+                name="q"
+                type="search"
+                autocomplete="off"
+                placeholder="Search titles, tags, keywords"
+              />
+            </form>
+
+            <div class="topbar-actions">
+              <button
+                class="icon-btn"
+                type="button"
+                data-action="toggle-theme"
+                aria-label="Toggle theme"
+                title="Toggle theme"
+              >
+                <span data-theme-icon></span>
+              </button>
+
+              <div class="popover-wrap">
+                <button
+                  class="icon-btn indicator-btn"
+                  type="button"
+                  data-action="toggle-notifications"
+                  aria-label="Notifications"
+                  aria-expanded="false"
+                >
+                  <span data-icon="bell"></span>
+                  <span class="indicator-dot" data-notification-dot hidden></span>
+                </button>
+                <div
+                  class="popover notification-popover"
+                  data-notification-popover
+                  hidden
+                ></div>
+              </div>
+
+              <div class="popover-wrap">
+                <button
+                  class="profile-button"
+                  type="button"
+                  data-action="toggle-profile"
+                  aria-label="Open profile menu"
+                  aria-expanded="false"
+                >
+                  <span class="avatar" data-user-avatar>KH</span>
+                  <span class="profile-meta">
+                    <span data-user-email>Signed in</span>
+                    <small data-user-role>User</small>
+                  </span>
+                </button>
+                <div class="popover profile-popover" data-profile-popover hidden>
+                  <button type="button" data-route-link="settings">
+                    <span data-icon="settings"></span>
+                    Settings
+                  </button>
+                  <button type="button" data-action="logout">
+                    <span data-icon="log-out"></span>
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main id="main-content" class="main-content" tabindex="-1">
+            <div class="breadcrumbs" data-breadcrumbs aria-label="Breadcrumb"></div>
+            <section class="page-region" data-page></section>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-region" data-toast-region aria-live="polite"></div>
+    <div class="modal-root" data-modal-root></div>
+    <div class="loading-overlay" data-loading-overlay hidden>
+      <div class="loading-card" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span data-loading-message>Loading KnowledgeHub</span>
+      </div>
+    </div>
+  </body>
+</html>
