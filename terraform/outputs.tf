@@ -3,6 +3,11 @@ output "website_url" {
   value       = "https://${module.cloudfront.distribution_domain_name}"
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID."
+  value       = module.cloudfront.distribution_id
+}
+
 output "api_endpoint" {
   description = "HTTP API endpoint."
   value       = module.api_gateway.api_endpoint

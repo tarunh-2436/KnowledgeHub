@@ -5,6 +5,7 @@ import { store } from "./state.js";
 import { renderDashboard } from "./dashboard.js";
 import {
   bindDocumentList,
+  renderDocumentsView,
   deleteDocument,
   downloadDocument,
   openDocumentDetails,
@@ -16,7 +17,6 @@ import { renderUploadView, mountUploadExperience, openUploadDialog } from "./upl
 import { downloadVersion, restoreVersion } from "./versions.js";
 import { bindSearchView, renderSearchView } from "./search.js";
 import { ensureAdminData, renderAdminView } from "./admin.js";
-import { renderSettingsView } from "./settings.js";
 import { installStaticIcons, icon } from "./components.js";
 import { initModals } from "./modal.js";
 import { initToasts, showToast } from "./toast.js";
@@ -300,7 +300,6 @@ class KnowledgeHubApp {
       upload: () => renderUploadView(this),
       search: () => renderSearchView(this, this.state.routeParams?.q || ""),
       admin: () => renderAdminView(this),
-      settings: () => renderSettingsView(this)
     }[route]?.() || renderDashboard(this);
 
     this.elements.page.innerHTML = errorBanner + pageHtml;
@@ -355,7 +354,6 @@ class KnowledgeHubApp {
       upload: "Upload",
       search: "Search",
       admin: "Admin",
-      settings: "Settings"
     };
     this.elements.breadcrumbs.textContent = `KnowledgeHub / ${labels[route] || "Dashboard"}`;
   }
@@ -522,7 +520,7 @@ class KnowledgeHubApp {
 }
 
 function normalizeRoute(route) {
-  const allowed = new Set(["dashboard", "documents", "shared", "upload", "search", "admin", "settings"]);
+  const allowed = new Set(["dashboard", "documents", "shared", "upload", "search", "admin"]);
   return allowed.has(route) ? route : "dashboard";
 }
 

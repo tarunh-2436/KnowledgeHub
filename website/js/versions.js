@@ -4,7 +4,7 @@ import { showToast } from "./toast.js";
 import { emptyState, icon, statusBadge, tagList } from "./components.js";
 import { escapeHtml, formatBytes, formatDate } from "./utils.js";
 
-export function renderVersionTimeline(versions = [], currentVersion, permissions = {}) {
+export function renderVersionTimeline(documentId, versions = [], currentVersion, permissions = {}) {
   if (!versions.length) {
     return emptyState({
       title: "No versions yet",
@@ -58,10 +58,10 @@ export function renderVersionTimeline(versions = [], currentVersion, permissions
                   ${version.processingError ? `<span style="color:var(--danger)">${escapeHtml(version.processingError)}</span>` : ""}
                 </div>
                 <div class="timeline-actions">
-                  <button class="btn btn-secondary" type="button" data-action="download-version" data-document-id="${escapeHtml(version.documentId)}" data-version-number="${escapeHtml(version.versionNumber)}">${icon("download")}Download</button>
+                  <button class="btn btn-secondary" type="button" data-action="download-version" data-document-id="${escapeHtml(documentId)}" data-version-number="${escapeHtml(version.versionNumber)}">${icon("download")}Download</button>
                   ${
                     permissions.canRestore && !isCurrent
-                      ? `<button class="btn btn-secondary" type="button" data-action="restore-version" data-document-id="${escapeHtml(version.documentId)}" data-version-number="${escapeHtml(version.versionNumber)}">${icon("rotate-ccw")}Restore</button>`
+                      ? `<button class="btn btn-secondary" type="button" data-action="restore-version" data-document-id="${escapeHtml(documentId)}" data-version-number="${escapeHtml(version.versionNumber)}">${icon("rotate-ccw")}Restore</button>`
                       : ""
                   }
                 </div>

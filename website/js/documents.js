@@ -11,7 +11,7 @@ import {
   icon,
   roleBadge,
   statusBadge,
-  tagList
+  tagList,
 } from "./components.js";
 import {
   escapeHtml,
@@ -19,12 +19,14 @@ import {
   normalizeRole,
   parseTags,
   sortByUpdatedAt,
-  toArray
+  toArray,
 } from "./utils.js";
 
 export function renderDocumentsView(app, mode = "owned") {
   const isShared = mode === "shared";
-  const documents = sortByUpdatedAt(isShared ? app.state.sharedDocuments : app.state.documents);
+  const documents = sortByUpdatedAt(
+    isShared ? app.state.sharedDocuments : app.state.documents,
+  );
   const title = isShared ? "Shared Documents" : "My Documents";
   const subtitle = isShared
     ? "Documents colleagues have shared with you."
@@ -66,7 +68,8 @@ export function bindDocumentList(root, app, mode = "owned") {
   let view = results?.dataset.defaultView || "cards";
 
   const render = () => {
-    const source = mode === "shared" ? app.state.sharedDocuments : app.state.documents;
+    const source =
+      mode === "shared" ? app.state.sharedDocuments : app.state.documents;
     const query = filter?.value.trim().toLowerCase() || "";
     const filtered = sortByUpdatedAt(source).filter((document) => {
       if (!query) return true;
@@ -74,20 +77,26 @@ export function bindDocumentList(root, app, mode = "owned") {
         document.title,
         document.ownerId,
         document.processingStatus,
-        ...(document.tags || [])
+        ...(document.tags || []),
       ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(query);
     });
-    results.innerHTML = renderDocumentResults(filtered, mode === "shared", view);
+    results.innerHTML = renderDocumentResults(
+      filtered,
+      mode === "shared",
+      view,
+    );
   };
 
   filter?.addEventListener("input", render);
   root.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       view = button.dataset.view;
-      root.querySelectorAll("[data-view]").forEach((node) => node.classList.toggle("is-active", node === button));
+      root
+        .querySelectorAll("[data-view]")
+        .forEach((node) => node.classList.toggle("is-active", node === button));
       render();
     });
   });
@@ -101,7 +110,7 @@ function renderDocumentResults(documents, isShared, view) {
         ? "Documents shared with you will appear here after access is granted."
         : "Upload a PDF, DOCX, TXT, or Markdown file to begin.",
       actionLabel: isShared ? "" : "Upload Document",
-      iconName: isShared ? "users" : "folder-open"
+      iconName: isShared ? "users" : "folder-open",
     });
   }
 
@@ -109,8 +118,8 @@ function renderDocumentResults(documents, isShared, view) {
     return documentTable(documents, {
       empty: {
         title: "No matches",
-        message: "Try a different filter."
-      }
+        message: "Try a different filter.",
+      },
     });
   }
 
@@ -122,29 +131,54 @@ function renderDocumentResults(documents, isShared, view) {
 export async function openDocumentDetails(app, documentId) {
   app.setLoading(true, "Loading document details");
   try {
-    const [document, versions, shares] = await Promise.all([
+    const existingDocument = app.findDocument(documentId);
+
+    const [documentResponse, versions, shares] = await Promise.all([
       api.getDocument(documentId),
       api.listVersions(documentId).catch(() => []),
-      api.listShares(documentId).catch(() => [])
+      api.listShares(documentId).catch(() => []),
     ]);
+
+    console.log("Cached document:", existingDocument);
+    console.log("Backend document:", documentResponse);
+
+    const document = {
+      ...existingDocument,
+      ...documentResponse,
+    };
+
+    console.log("Merged document:", document);
 
     const currentVersion =
       toArray(versions).find(
-        (version) => Number(version.versionNumber) === Number(document.currentVersion)
+        (version) =>
+          Number(version.versionNumber) === Number(document.currentVersion),
       ) || toArray(versions)[0];
 
     const permissions = getDocumentPermissions(app, document);
     openModal({
       title: document.title || "Document Details",
       size: "wide",
-      content: renderDocumentDetails(document, versions, currentVersion, permissions, shares)
+      content: renderDocumentDetails(
+        document,
+        versions,
+        currentVersion,
+        permissions,
+        shares,
+      ),
     });
   } finally {
     app.setLoading(false);
   }
 }
 
-function renderDocumentDetails(document, versions, currentVersion, permissions, shares = []) {
+function renderDocumentDetails(
+  document,
+  versions,
+  currentVersion,
+  permissions,
+  shares = [],
+) {
   return `
     <div class="details-grid">
       <div class="detail-stack">
@@ -198,7 +232,7 @@ function renderDocumentDetails(document, versions, currentVersion, permissions, 
             ${permissions.canUpload ? `<button class="btn btn-secondary" type="button" data-action="upload-version" data-document-id="${escapeHtml(document.documentId)}">${icon("upload-cloud")}Upload Version</button>` : ""}
           </div>
           <div style="margin-top:16px">
-            ${renderVersionTimeline(versions, document.currentVersion, permissions)}
+            ${renderVersionTimeline(document.documentId, versions, document.currentVersion, permissions)}
           </div>
         </section>
       </div>
@@ -246,7 +280,10 @@ function renderSharingSummary(shares) {
 
   return `
     <div class="stack">
-      ${items.slice(0, 4).map((share) => `
+      ${items
+        .slice(0, 4)
+        .map(
+          (share) => `
         <div class="key-row" style="align-items:center">
           <div>
             <strong>${escapeHtml(share.sharedWithEmail || share.sharedWithUserId || "Unknown user")}</strong>
@@ -254,7 +291,9 @@ function renderSharingSummary(shares) {
           </div>
           <div class="cluster">${roleBadge(share.role)}</div>
         </div>
-      `).join("")}
+      `,
+        )
+        .join("")}
       ${items.length > 4 ? `<p class="muted mb-0">+${items.length - 4} more collaborators.</p>` : ""}
     </div>
   `;
@@ -262,7 +301,10 @@ function renderSharingSummary(shares) {
 
 export function getDocumentPermissions(app, document) {
   const userId = app.state.user?.sub;
-  const role = document.ownerId === userId ? "OWNER" : normalizeRole(document.shareRole || document.role);
+  const role =
+    document.ownerId === userId
+      ? "OWNER"
+      : normalizeRole(document.shareRole || document.role);
   const isAdmin = app.state.user?.isAdmin;
   return {
     role,
@@ -270,14 +312,18 @@ export function getDocumentPermissions(app, document) {
     canShare: role === "OWNER",
     canUpload: role === "OWNER" || role === "EDITOR",
     canRestore: role === "OWNER" || role === "EDITOR",
-    canDelete: role === "OWNER" || isAdmin
+    canDelete: role === "OWNER" || isAdmin,
   };
 }
 
 export async function downloadDocument(documentId) {
   const document = await api.getDocument(documentId);
   if (!document.downloadUrl) {
-    showToast("warning", "Download unavailable", "The backend did not return a download URL.");
+    showToast(
+      "warning",
+      "Download unavailable",
+      "The backend did not return a download URL.",
+    );
     return;
   }
   window.open(document.downloadUrl, "_blank", "noopener");
@@ -285,8 +331,7 @@ export async function downloadDocument(documentId) {
 
 export async function openRenameDialog(app, documentId) {
   const document =
-    app.findDocument(documentId) ||
-    (await api.getDocument(documentId));
+    app.findDocument(documentId) || (await api.getDocument(documentId));
   const content = `
     <form class="stack" data-rename-form>
       <div class="field">
@@ -304,18 +349,24 @@ export async function openRenameDialog(app, documentId) {
   `;
 
   const modal = openModal({ title: "Rename Document", content });
-  modal.querySelector("[data-rename-form]").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await api.updateDocument(documentId, {
-      title: String(form.get("title") || "").trim(),
-      tags: parseTags(form.get("tags"))
+  modal
+    .querySelector("[data-rename-form]")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      await api.updateDocument(documentId, {
+        title: String(form.get("title") || "").trim(),
+        tags: parseTags(form.get("tags")),
+      });
+      showToast(
+        "success",
+        "Document updated",
+        "The title and tags were saved.",
+      );
+      await app.refreshData({ quiet: true });
+      app.render();
+      openDocumentDetails(app, documentId);
     });
-    showToast("success", "Document updated", "The title and tags were saved.");
-    await app.refreshData({ quiet: true });
-    app.render();
-    openDocumentDetails(app, documentId);
-  });
 }
 
 export async function deleteDocument(app, documentId) {
@@ -323,7 +374,7 @@ export async function deleteDocument(app, documentId) {
   const confirmed = await confirmDialog({
     title: "Delete document",
     message: `Delete ${document?.title || "this document"} and all versions? This cannot be undone.`,
-    confirmLabel: "Delete Document"
+    confirmLabel: "Delete Document",
   });
 
   if (!confirmed) return;
@@ -334,11 +385,13 @@ export async function deleteDocument(app, documentId) {
 }
 
 export async function openShareForDocument(app, documentId) {
-  const document = app.findDocument(documentId) || (await api.getDocument(documentId));
+  const document =
+    app.findDocument(documentId) || (await api.getDocument(documentId));
   await openShareDialog(app, document);
 }
 
 export async function openUploadVersion(app, documentId) {
-  const document = app.findDocument(documentId) || (await api.getDocument(documentId));
+  const document =
+    app.findDocument(documentId) || (await api.getDocument(documentId));
   openUploadDialog(app, document);
 }

@@ -18,32 +18,6 @@ def build_permanent_s3_key(
     return f"documents/" f"{document_id}/" f"v{version_number:06d}/" f"{filename}"
 
 
-def move_s3_object(
-    s3,
-    bucket_name,
-    source_key,
-    destination_key,
-):
-    """
-    Move an object within the same bucket.
-    Implemented as CopyObject followed by DeleteObject.
-    """
-
-    s3.copy_object(
-        Bucket=bucket_name,
-        CopySource={
-            "Bucket": bucket_name,
-            "Key": source_key,
-        },
-        Key=destination_key,
-    )
-
-    s3.delete_object(
-        Bucket=bucket_name,
-        Key=source_key,
-    )
-
-
 def copy_s3_object(
     s3,
     bucket_name,
@@ -122,26 +96,17 @@ def transact_create_version(
     """
     Atomically:
 
-    - Verify current version
-    - Update DOCUMENT
-    - Create VERSION
+    - Verify the current document version has not changed
+    - Update the DOCUMENT item
+    - Create the new VERSION item
+
+    Uses optimistic locking by placing the ConditionExpression on the
+    Update operation instead of a separate ConditionCheck, since DynamoDB
+    transactions cannot perform multiple operations on the same item.
     """
 
     dynamodb_client.transact_write_items(
         TransactItems=[
-            {
-                "ConditionCheck": {
-                    "TableName": table_name,
-                    "Key": {
-                        "PK": serializer.serialize(f"DOC#{document_id}"),
-                        "SK": serializer.serialize("DOCUMENT"),
-                    },
-                    "ConditionExpression": "currentVersion = :expected",
-                    "ExpressionAttributeValues": {
-                        ":expected": serializer.serialize(current_version),
-                    },
-                }
-            },
             {
                 "Update": {
                     "TableName": table_name,
@@ -154,7 +119,9 @@ def transact_create_version(
                         "processingStatus = :status, "
                         "updatedAt = :updatedAt"
                     ),
+                    "ConditionExpression": "currentVersion = :expected",
                     "ExpressionAttributeValues": {
+                        ":expected": serializer.serialize(current_version),
                         ":next": serializer.serialize(next_version),
                         ":status": serializer.serialize("PROCESSING"),
                         ":updatedAt": serializer.serialize(updated_at),
@@ -168,6 +135,9 @@ def transact_create_version(
                         key: serializer.serialize(value)
                         for key, value in version_item.items()
                     },
+                    "ConditionExpression": (
+                        "attribute_not_exists(PK) " "AND attribute_not_exists(SK)"
+                    ),
                 }
             },
         ]

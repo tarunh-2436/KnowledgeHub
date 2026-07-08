@@ -10,7 +10,7 @@ from helpers import (
     extract_docx_text,
     extract_plain_text,
     normalize_text,
-    generate_summary,
+    summarize_text,
     generate_keywords,
     get_current_timestamp,
 )
@@ -19,7 +19,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 TABLE_NAME = os.environ["TABLE_NAME"]
-DOCUMENT_BUCKET = os.environ["DOCUMENT_BUCKET"]
+STORAGE_BUCKET = os.environ["STORAGE_BUCKET"]
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -87,7 +87,7 @@ def process_document(
         )
 
         response = s3.get_object(
-            Bucket=DOCUMENT_BUCKET,
+            Bucket=STORAGE_BUCKET,
             Key=version["s3Key"],
         )
 
@@ -120,7 +120,7 @@ def process_document(
 
             raise Exception("No extractable text found.")
 
-        summary = generate_summary(text)
+        summary = summarize_text(text)
 
         keywords = generate_keywords(text)
 

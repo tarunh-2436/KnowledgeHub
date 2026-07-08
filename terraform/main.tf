@@ -122,6 +122,31 @@ module "storage_bucket" {
   tags = local.tags
 }
 
+resource "aws_s3_bucket_cors_configuration" "documents" {
+  bucket = module.storage_bucket.bucket_id
+
+  cors_rule {
+    allowed_headers = ["*"]
+
+    allowed_methods = [
+      "GET",
+      "PUT",
+      "POST",
+      "HEAD"
+    ]
+
+    allowed_origins = [
+      "*"
+    ]
+
+    expose_headers = [
+      "ETag"
+    ]
+
+    max_age_seconds = 3000
+  }
+}
+
 ###############################################################################
 # Log Archive Bucket
 ###############################################################################
@@ -131,7 +156,7 @@ module "log_archive_bucket" {
 
   bucket_name       = "${local.project_name}-log-archive"
   enable_versioning = true
-  enable_lifecycle  = true
+  enable_lifecycle  = false
 
   tags = local.tags
 }
@@ -333,7 +358,10 @@ resource "aws_iam_policy" "api_lambda_policy" {
           "dynamodb:DeleteItem"
         ]
 
-        Resource = module.dynamodb.table_arn
+        Resource = [
+          module.dynamodb.table_arn,
+          "${module.dynamodb.table_arn}/index/*"
+        ]
       },
 
       {
@@ -365,7 +393,8 @@ resource "aws_iam_policy" "api_lambda_policy" {
         "Effect": "Allow",
 
         "Action": [
-          "cognito-idp:ListUsers"
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminGetUser",
         ],
         
         "Resource": module.cognito.user_pool_arn
@@ -499,13 +528,28 @@ resource "aws_iam_policy" "ingestion_lambda_policy" {
       },
 
       {
+        Sid ="ListStorageBucket"
+        Effect = "Allow"
+
+        Action = [
+          "s3:ListBucket"
+        ]
+
+        Resource = module.storage_bucket.bucket_arn
+      },
+
+      {
         Sid    = "DynamoDB"
         Effect = "Allow"
 
         Action = [
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:ConditionCheckItem",
+          "dynamodb:TransactWriteItems"
         ]
 
         Resource = module.dynamodb.table_arn

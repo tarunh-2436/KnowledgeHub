@@ -1,7 +1,9 @@
 import json
 import uuid
-from time import datetime, time, timezone
+from datetime import datetime, timezone
+import time
 from pathlib import Path
+from decimal import Decimal
 
 SUPPORTED_FILE_TYPES = {
     ".pdf": {
@@ -21,11 +23,26 @@ SUPPORTED_FILE_TYPES = {
 }
 
 
+def json_serializer(obj):
+    """
+    Convert DynamoDB Decimal objects into JSON serializable values.
+    """
+    if isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        return float(obj)
+
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
 def success(data=None, status_code=200):
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"success": True, "data": data or {}}),
+        "body": json.dumps(
+            {"success": True, "data": {} if data is None else data},
+            default=json_serializer,
+        ),
     }
 
 
@@ -74,7 +91,16 @@ def get_user(event):
     groups = claims.get("cognito:groups", [])
 
     if isinstance(groups, str):
-        groups = [group.strip() for group in groups.split(",")]
+        groups = groups.strip()
+
+        if groups.startswith("[") and groups.endswith("]"):
+            groups = groups[1:-1]
+
+        groups = [
+            group.strip().strip('"').strip("'")
+            for group in groups.split(",")
+            if group.strip()
+        ]
 
     return {
         "userId": claims["sub"],
@@ -147,35 +173,55 @@ def get_document_permission(table, document_id, user):
     return {
         "exists": True,
         "authorized": True,
-        "role": share["permission"],
+        "role": share["role"],
         "document": document,
         "share": share,
     }
 
 
-def ensure_admin_subscription(user, cognito, sns, user_pool_id, topic_arn):
+def ensure_admin_subscription(
+    user,
+    cognito,
+    sns,
+    user_pool_id,
+    topic_arn,
+):
+    """
+    Ensure the administrator is subscribed to the SNS topic.
+
+    Returns:
+        True  -> Subscription already exists.
+        False -> Subscription request was created.
+    """
 
     response = cognito.admin_get_user(
         UserPoolId=user_pool_id,
         Username=user["userId"],
     )
 
-    attributes = {
-        attribute["Name"]: attribute["Value"]
-        for attribute in response["UserAttributes"]
-    }
+    email = next(
+        (
+            attribute["Value"]
+            for attribute in response["UserAttributes"]
+            if attribute["Name"] == "email"
+        ),
+        None,
+    )
 
-    email = attributes["email"]
+    if not email:
+        raise ValueError("Admin user does not have an email address.")
 
     paginator = sns.get_paginator("list_subscriptions_by_topic")
 
     for page in paginator.paginate(
         TopicArn=topic_arn,
     ):
-
         for subscription in page["Subscriptions"]:
 
-            if subscription["Endpoint"] == email:
+            if (
+                subscription["Protocol"] == "email"
+                and subscription["Endpoint"].lower() == email.lower()
+            ):
                 return True
 
     sns.subscribe(

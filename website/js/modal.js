@@ -10,7 +10,13 @@ export function initModals(documentRoot = document) {
   document.addEventListener("keydown", handleKeydown);
 }
 
-export function openModal({ title, content, footer = "", size = "", onClose } = {}) {
+export function openModal({
+  title,
+  content,
+  footer = "",
+  size = "",
+  onClose,
+} = {}) {
   if (!root) initModals();
   closeModal();
 
@@ -46,7 +52,10 @@ export function openModal({ title, content, footer = "", size = "", onClose } = 
   }
 
   backdrop.addEventListener("click", (event) => {
-    if (event.target === backdrop || event.target.closest("[data-modal-close]")) {
+    if (
+      event.target === backdrop ||
+      event.target.closest("[data-modal-close]")
+    ) {
       closeModal();
     }
   });
@@ -73,7 +82,7 @@ export function confirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
-  tone = "danger"
+  tone = "danger",
 }) {
   return new Promise((resolve) => {
     openModal({
@@ -83,22 +92,27 @@ export function confirmDialog({
         <button class="btn btn-secondary" type="button" data-modal-cancel>${escapeHtml(cancelLabel)}</button>
         <button class="btn ${tone === "danger" ? "btn-danger" : "btn-primary"}" type="button" data-modal-confirm>${escapeHtml(confirmLabel)}</button>
       `,
-      onClose: () => resolve(false)
+      onClose: () => resolve(false),
     });
 
     root.querySelector("[data-modal-cancel]")?.addEventListener("click", () => {
       closeModal();
       resolve(false);
     });
-    root.querySelector("[data-modal-confirm]")?.addEventListener("click", () => {
-      const modal = activeModal;
-      activeModal = null;
-      modal?.backdrop.remove();
-      modal?.onClose = null;
-      resolve(true);
-    });
+    root
+      .querySelector("[data-modal-confirm]")
+      ?.addEventListener("click", () => {
+        const modal = activeModal;
+        activeModal = null;
+        modal?.backdrop.remove();
+        if (modal) {
+          modal.onClose = null;
+        }
+        resolve(true);
+      });
   });
 }
+
 
 function handleKeydown(event) {
   if (!activeModal) return;
@@ -135,7 +149,7 @@ function trapFocus(event) {
 function getFocusable(container) {
   return Array.from(
     container.querySelectorAll(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
   );
 }

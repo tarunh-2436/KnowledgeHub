@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 TABLE_NAME = os.environ["TABLE_NAME"]
-BUCKET_NAME = os.environ["BUCKET_NAME"]
+BUCKET_NAME = os.environ["STORAGE_BUCKET"]
 UPLOAD_QUEUE_URL = os.environ["UPLOAD_QUEUE_URL"]
 USER_POOL_ID = os.environ["USER_POOL_ID"]
 SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
@@ -442,7 +442,7 @@ def get_document(event):
         response = table.get_item(
             Key={
                 "PK": f"DOC#{document_id}",
-                "SK": f"VERSION#{document['currentVersion']:06d}",
+                "SK": f"VERSION#{int(document['currentVersion']):06d}",
             }
         )
 

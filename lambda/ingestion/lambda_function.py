@@ -5,7 +5,6 @@ import boto3
 
 from helpers import (
     build_permanent_s3_key,
-    move_s3_object,
     copy_s3_object,
     delete_s3_object,
     transact_write_items,
@@ -14,7 +13,7 @@ from helpers import (
 )
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO())
+logger.setLevel(logging.INFO)
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 STORAGE_BUCKET = os.environ["STORAGE_BUCKET"]
@@ -148,20 +147,14 @@ def process_new_document(pending):
         "processingStatus": "PROCESSING",
         "createdAt": pending["createdAt"],
         "updatedAt": pending["createdAt"],
-        # Owner Documents GSI
-        "OwnerGSI_PK": f"OWNER#{owner_id}",
-        "OwnerGSI_SK": pending["createdAt"],
-        # Admin Dashboard GSI
-        "AdminGSI_PK": "DOCUMENT",
-        "AdminGSI_SK": pending["createdAt"],
-        # Processing Dashboard GSI
-        "ProcessingGSI_PK": "PROCESSING",
-        "ProcessingGSI_SK": pending["createdAt"],
+        "OwnerGSI": f"OWNER#{owner_id}",
+        "AdminGSI": "DOCUMENT",
+        "ProcessingGSI": "PROCESSING",
     }
 
     version_item = {
         "PK": f"DOC#{document_id}",
-        "SK": f"VERSION#{version_number:06d}",
+        "SK": f"VERSION#{int(version_number):06d}",
         "entityType": "VERSION",
         "versionNumber": version_number,
         "ownerId": owner_id,
@@ -186,10 +179,12 @@ def process_new_document(pending):
             document_id,
         )
 
-        move_s3_object(
+        original_key = pending["temporaryS3Key"]
+
+        copy_s3_object(
             s3=s3,
             bucket_name=STORAGE_BUCKET,
-            source_key=pending["temporaryS3Key"],
+            source_key=original_key,
             destination_key=permanent_s3_key,
         )
 
@@ -230,6 +225,11 @@ def process_new_document(pending):
                 "SK": pending["SK"],
             },
             ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
+        )
+
+        s3.delete_object(
+            Bucket=STORAGE_BUCKET,
+            Key=original_key,
         )
 
         logger.info(
@@ -292,9 +292,9 @@ def process_new_version(pending):
 
     version_item = {
         "PK": f"DOC#{document_id}",
-        "SK": f"VERSION#{next_version:06d}",
+        "SK": f"VERSION#{int(next_version):06d}",
         "entityType": "VERSION",
-        "versionNumber": next_version,
+        "versionNumber": int(next_version),
         "ownerId": pending["ownerId"],
         "uploadedBy": pending["uploadedBy"],
         "filename": pending["filename"],
@@ -318,10 +318,12 @@ def process_new_version(pending):
             next_version,
         )
 
-        move_s3_object(
+        original_key = pending["temporaryS3Key"]
+
+        copy_s3_object(
             s3=s3,
             bucket_name=STORAGE_BUCKET,
-            source_key=pending["temporaryS3Key"],
+            source_key=original_key,
             destination_key=permanent_s3_key,
         )
 
@@ -350,6 +352,11 @@ def process_new_version(pending):
             "Queued version for AI processing. documentId=%s version=%s",
             document_id,
             next_version,
+        )
+
+        s3.delete_object(
+            Bucket=STORAGE_BUCKET,
+            Key=original_key,
         )
 
         table.delete_item(
@@ -410,7 +417,7 @@ def process_restore(pending):
     source_version = table.get_item(
         Key={
             "PK": f"DOC#{document_id}",
-            "SK": f"VERSION#{pending['sourceVersion']:06d}",
+            "SK": f"VERSION#{int(pending['sourceVersion']):06d}",
         }
     ).get("Item")
 
@@ -428,8 +435,8 @@ def process_restore(pending):
 
     restored_version = source_version.copy()
 
-    restored_version["SK"] = f"VERSION#{next_version:06d}"
-    restored_version["versionNumber"] = next_version
+    restored_version["SK"] = f"VERSION#{int(next_version):06d}"
+    restored_version["versionNumber"] = int(next_version)
     restored_version["s3Key"] = permanent_s3_key
     restored_version["uploadedBy"] = pending["restoredBy"]
     restored_version["createdAt"] = pending["createdAt"]
