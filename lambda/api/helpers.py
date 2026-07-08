@@ -1,6 +1,24 @@
 import json
 import uuid
 from time import datetime, time, timezone
+from pathlib import Path
+
+SUPPORTED_FILE_TYPES = {
+    ".pdf": {
+        "application/pdf",
+    },
+    ".docx": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
+    ".txt": {
+        "text/plain",
+    },
+    ".md": {
+        "text/markdown",
+        "text/plain",
+        "text/x-markdown",
+    },
+}
 
 
 def success(data=None, status_code=200):
@@ -167,3 +185,26 @@ def ensure_admin_subscription(user, cognito, sns, user_pool_id, topic_arn):
     )
 
     return False
+
+
+def validate_file_type(
+    filename,
+    content_type,
+):
+    """
+    Validate the uploaded document's file extension and MIME type.
+    """
+
+    extension = Path(filename).suffix.lower()
+
+    allowed_content_types = SUPPORTED_FILE_TYPES.get(extension)
+
+    if allowed_content_types is None:
+
+        raise ValueError(f"Unsupported file type: {extension}")
+
+    if content_type not in allowed_content_types:
+
+        raise ValueError(
+            f"Invalid content type '{content_type}' for '{extension}' files."
+        )

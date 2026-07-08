@@ -634,17 +634,6 @@ resource "aws_iam_policy" "processor_lambda_policy" {
         Resource = module.dynamodb.table_arn
       },
 
-      {
-        Sid    = "SNSNotifications"
-        Effect = "Allow"
-
-        Action = [
-          "sns:Publish"
-        ]
-
-        Resource = module.notifications_topic.topic_arn
-      }
-
     ]
 
   })
@@ -677,8 +666,6 @@ module "processor_lambda" {
     TABLE_NAME = module.dynamodb.table_name
 
     STORAGE_BUCKET = module.storage_bucket.bucket_name
-
-    SNS_TOPIC_ARN = module.notifications_topic.topic_arn
 
   }
 

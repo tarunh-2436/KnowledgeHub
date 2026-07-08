@@ -16,6 +16,7 @@ from helpers import (
     get_expiry_timestamp,
     get_document_permission,
     ensure_admin_subscription,
+    validate_file_type,
 )
 
 import logging
@@ -245,6 +246,17 @@ def document_complete(event):
             upload_id,
         )
 
+        validate_file_type(
+            filename=filename,
+            content_type=response["ContentType"],
+        )
+
+        logger.info(
+            "Validated uploaded file type. documentId=%s uploadId=%s",
+            document_id,
+            upload_id,
+        )
+
         pending_upload = {
             "PK": f"PENDING#{document_id}",
             "SK": f"UPLOAD#{upload_id}",
@@ -295,6 +307,18 @@ def document_complete(event):
         return error(
             "Authentication required.",
             status_code=401,
+        )
+
+    except ValueError as e:
+
+        logger.warning(
+            "Invalid uploaded file type. %s",
+            str(e),
+        )
+
+        return error(
+            str(e),
+            status_code=400,
         )
 
     except ClientError as e:
@@ -892,6 +916,17 @@ def version_complete(event):
             upload_id,
         )
 
+        validate_file_type(
+            filename=filename,
+            content_type=response["ContentType"],
+        )
+
+        logger.info(
+            "Validated uploaded version type. documentId=%s uploadId=%s",
+            document_id,
+            upload_id,
+        )
+
         pending_upload = {
             "PK": f"PENDING#{document_id}",
             "SK": f"UPLOAD#{upload_id}",
@@ -947,6 +982,18 @@ def version_complete(event):
         return error(
             "Authentication required.",
             status_code=401,
+        )
+
+    except ValueError as e:
+
+        logger.warning(
+            "Invalid uploaded file type. %s",
+            str(e),
+        )
+
+        return error(
+            str(e),
+            status_code=400,
         )
 
     except ClientError as e:
