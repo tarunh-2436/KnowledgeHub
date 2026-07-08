@@ -17,8 +17,8 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO())
 
 TABLE_NAME = os.environ["TABLE_NAME"]
-DOCUMENT_BUCKET = os.environ["DOCUMENT_BUCKET"]
-PROCESSOR_QUEUE_URL = os.environ["PROCESSOR_QUEUE_URL"]
+STORAGE_BUCKET = os.environ["STORAGE_BUCKET"]
+PROCESSING_QUEUE_URL = os.environ["PROCESSING_QUEUE_URL"]
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -188,7 +188,7 @@ def process_new_document(pending):
 
         move_s3_object(
             s3=s3,
-            bucket_name=DOCUMENT_BUCKET,
+            bucket_name=STORAGE_BUCKET,
             source_key=pending["temporaryS3Key"],
             destination_key=permanent_s3_key,
         )
@@ -211,7 +211,7 @@ def process_new_document(pending):
 
         send_processor_message(
             sqs=sqs,
-            queue_url=PROCESSOR_QUEUE_URL,
+            queue_url=PROCESSING_QUEUE_URL,
             message={
                 "documentId": document_id,
                 "versionNumber": version_number,
@@ -251,7 +251,7 @@ def process_new_document(pending):
 
                 delete_s3_object(
                     s3=s3,
-                    bucket_name=DOCUMENT_BUCKET,
+                    bucket_name=STORAGE_BUCKET,
                     object_key=permanent_s3_key,
                 )
 
@@ -320,7 +320,7 @@ def process_new_version(pending):
 
         move_s3_object(
             s3=s3,
-            bucket_name=DOCUMENT_BUCKET,
+            bucket_name=STORAGE_BUCKET,
             source_key=pending["temporaryS3Key"],
             destination_key=permanent_s3_key,
         )
@@ -339,7 +339,7 @@ def process_new_version(pending):
 
         send_processor_message(
             sqs=sqs,
-            queue_url=PROCESSOR_QUEUE_URL,
+            queue_url=PROCESSING_QUEUE_URL,
             message={
                 "documentId": document_id,
                 "versionNumber": next_version,
@@ -379,7 +379,7 @@ def process_new_version(pending):
 
                 delete_s3_object(
                     s3=s3,
-                    bucket_name=DOCUMENT_BUCKET,
+                    bucket_name=STORAGE_BUCKET,
                     object_key=permanent_s3_key,
                 )
 
@@ -442,7 +442,7 @@ def process_restore(pending):
 
         copy_s3_object(
             s3=s3,
-            bucket_name=DOCUMENT_BUCKET,
+            bucket_name=STORAGE_BUCKET,
             source_key=source_version["s3Key"],
             destination_key=permanent_s3_key,
         )
@@ -488,7 +488,7 @@ def process_restore(pending):
 
                 delete_s3_object(
                     s3=s3,
-                    bucket_name=DOCUMENT_BUCKET,
+                    bucket_name=STORAGE_BUCKET,
                     object_key=permanent_s3_key,
                 )
 
