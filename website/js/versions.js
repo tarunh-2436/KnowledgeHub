@@ -97,6 +97,5 @@ export async function restoreVersion(app, documentId, versionNumber) {
   await api.restoreVersion(documentId, versionNumber);
   showToast("success", "Restore started", "A new version will appear after ingestion completes.");
   await app.refreshData({ quiet: true });
-  app.pollDocument(documentId);
   app.render();
 }
