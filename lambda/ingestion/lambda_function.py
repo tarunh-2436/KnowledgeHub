@@ -149,7 +149,6 @@ def process_new_document(pending):
         "updatedAt": pending["createdAt"],
         "OwnerGSI": f"OWNER#{owner_id}",
         "AdminGSI": "DOCUMENT",
-        "ProcessingGSI": "PROCESSING",
     }
 
     version_item = {
