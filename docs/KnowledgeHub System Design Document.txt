@@ -1,0 +1,822 @@
+===============================================================================
+SYSTEM DESIGN DOCUMENT
+===============================================================================
+
+Project Name
+------------
+KnowledgeHub
+
+Project Description
+-------------------
+AI-Powered Enterprise Knowledge Management Platform
+
+Version
+-------
+1.0
+
+Document Status
+---------------
+Final
+
+===============================================================================
+1. PURPOSE
+===============================================================================
+
+This document describes the system architecture of KnowledgeHub.
+
+It defines
+
+• Overall AWS Architecture
+• Component Responsibilities
+• Event-Driven Workflows
+• Processing Pipelines
+• Security Architecture
+• Deployment Strategy
+• Monitoring Strategy
+
+Unlike the Software Requirements Specification, this document focuses on the
+technical implementation of the platform.
+
+===============================================================================
+2. HIGH LEVEL ARCHITECTURE
+===============================================================================
+
+                                   +-------------------+
+                                   |     Browser       |
+                                   +---------+---------+
+                                             |
+                                             |
+                                   CloudFront Distribution
+                                             |
+                       +---------------------+----------------------+
+                       |                                            |
+                       |                                            |
+                  Static Website                              Amazon Cognito
+                     (S3)                                    Authentication
+                       |                                            |
+                       +---------------------+----------------------+
+                                             |
+                                        API Gateway
+                                             |
+                                             |
+                                    REST Lambda Functions
+                                             |
+            +---------------+---------------+------------------+
+            |               |               |                  |
+            |               |               |                  |
+        DynamoDB            S3             SNS             CloudWatch
+            |               |
+            |               |
+            |         ObjectCreated Event
+            |               |
+            |              SQS
+            |               |
+            |               |
+      Ingestion Lambda ------+
+            |
+            |
+      AI Processing Lambda
+            |
+            |
+         DynamoDB
+
+===============================================================================
+3. SYSTEM COMPONENTS
+===============================================================================
+
+3.1 Frontend
+
+Responsibilities
+
+• User Interface
+• Authentication
+• Upload Management
+• Dashboard Rendering
+• Search Filtering
+• Document Viewing
+
+Hosting
+
+Amazon S3
+
+Delivery
+
+Amazon CloudFront
+
+-------------------------------------------------------------------------------
+
+3.2 Authentication
+
+Amazon Cognito manages
+
+• User Registration
+
+• Login
+
+• JWT Token Generation
+
+• User Identity
+
+The backend trusts only validated JWT tokens.
+
+-------------------------------------------------------------------------------
+
+3.3 API Gateway
+
+API Gateway acts as the entry point for all backend requests.
+
+Responsibilities
+
+• Request Routing
+
+• JWT Authorization
+
+• HTTPS Termination
+
+• CORS
+
+-------------------------------------------------------------------------------
+
+3.4 Lambda Functions
+
+KnowledgeHub consists of three logical Lambda groups.
+
+User APIs
+
+Handles
+
+• Document APIs
+
+• Sharing APIs
+
+• Dashboard APIs
+
+• Administration APIs
+
+------------------------------------------------
+
+Ingestion Lambda
+
+Handles
+
+• Upload Validation
+
+• Version Assignment
+
+• Object Movement
+
+• Metadata Creation
+
+• Audit Creation
+
+• Statistics Updates
+
+------------------------------------------------
+
+AI Processing Lambda
+
+Handles
+
+• Text Extraction
+
+• Summary Generation
+
+• Keyword Extraction
+
+• Metadata Updates
+
+• Processing Completion
+
+===============================================================================
+4. DATABASE ARCHITECTURE
+===============================================================================
+
+KnowledgeHub uses a Single Table Design.
+
+Each document acts as the aggregate root.
+
+Example
+
+DOC#123
+
+│
+
+├── DOCUMENT
+
+├── VERSION#000001
+
+├── VERSION#000002
+
+├── VERSION#000003
+
+├── SHARE#USER123
+
+├── SHARE#USER456
+
+├── AUDIT#20260703T091200Z
+
+├── AUDIT#20260703T113500Z
+
+-------------------------------------------------------------------------------
+
+Global Secondary Indexes
+
+GSI 1
+
+Owner Documents
+
+------------------------------------------------
+
+GSI 2
+
+Shared Documents
+
+------------------------------------------------
+
+GSI 3
+
+Administrator Documents
+
+------------------------------------------------
+
+GSI 4
+
+Processing Documents
+
+===============================================================================
+5. STORAGE ARCHITECTURE
+===============================================================================
+
+Temporary Uploads
+
+uploads/
+
+    ownerId/
+
+        documentId/
+
+            uploadId
+
+-------------------------------------------------------------------------------
+
+Permanent Storage
+
+documents/
+
+    documentId/
+
+        v000001/
+
+            filename.pdf
+
+        v000002/
+
+            filename.pdf
+
+        v000003/
+
+            filename.pdf
+
+Original filenames are preserved.
+
+===============================================================================
+6. DOCUMENT UPLOAD WORKFLOW
+===============================================================================
+
+             User
+
+              |
+
+              |
+
+POST /documents
+
+              |
+
+              |
+
+       API Gateway
+
+              |
+
+              |
+
+      Upload Lambda
+
+              |
+
+              |
+
+Generate
+
+• Document ID
+
+• Upload ID
+
+• Pre-signed URL
+
+              |
+
+              |
+
+Browser uploads directly to S3
+
+              |
+
+              |
+
+Temporary Upload
+
+              |
+
+              |
+
+ObjectCreated Event
+
+              |
+
+              |
+
+SQS Queue
+
+              |
+
+              |
+
+Ingestion Lambda
+
+              |
+
+              |
+
+Validate Upload
+
+              |
+
+              |
+
+Assign Version
+
+              |
+
+              |
+
+Move Object
+
+              |
+
+              |
+
+Create Metadata
+
+Status = PROCESSING
+
+              |
+
+              |
+
+Create Audit
+
+              |
+
+              |
+
+Update Statistics
+
+              |
+
+              |
+
+Publish Processing Message
+
+===============================================================================
+7. AI PROCESSING WORKFLOW
+===============================================================================
+
+Processing Queue
+
+       |
+
+       |
+
+AI Processing Lambda
+
+       |
+
+       |
+
+Download File
+
+       |
+
+       |
+
+Extract Text
+
+       |
+
+       |
+
+Generate Summary
+
+       |
+
+       |
+
+Generate Keywords
+
+       |
+
+       |
+
+Update Version Metadata
+
+       |
+
+       |
+
+Version Status = READY
+
+       |
+
+       |
+
+Document Status = READY
+
+       |
+
+       |
+
+SNS Notification
+
+-------------------------------------------------------------------------------
+
+Failure Path
+
+AI Exception
+
+       |
+
+       |
+
+Version Status = FAILED
+
+       |
+
+       |
+
+Document Status = FAILED
+
+       |
+
+       |
+
+Increment Failed Processing Counter
+
+===============================================================================
+8. VERSION RESTORE WORKFLOW
+===============================================================================
+
+User
+
+|
+
+|
+
+Select Previous Version
+
+|
+
+|
+
+Restore
+
+|
+
+|
+
+Retrieve Previous Version Metadata
+
+|
+
+|
+
+Create New Version
+
+|
+
+|
+
+Reuse Existing S3 Object
+
+|
+
+|
+
+Update Current Version
+
+|
+
+|
+
+Audit
+
+|
+
+|
+
+Statistics
+
+No file duplication occurs.
+
+===============================================================================
+9. CONCURRENT VERSION CREATION
+===============================================================================
+
+Two users upload simultaneously.
+
+               Upload A
+
+                    |
+
+             Read Latest Version
+
+                    |
+
+             Conditional Update
+
+                    |
+
+              Version 7 Created
+
+------------------------------------------------
+
+               Upload B
+
+                    |
+
+             Read Latest Version
+
+                    |
+
+        Conditional Update Fails
+
+                    |
+
+                 Retry
+
+                    |
+
+             Read Latest Version
+
+                    |
+
+             Version 8 Created
+
+Optimistic concurrency guarantees sequential version numbers without locking.
+
+===============================================================================
+10. SECURITY ARCHITECTURE
+===============================================================================
+
+Authentication
+
+Amazon Cognito
+
+-------------------------------------------------------------------------------
+
+Authorization
+
+JWT Tokens
+
+-------------------------------------------------------------------------------
+
+Storage
+
+Private Amazon S3 Buckets
+
+-------------------------------------------------------------------------------
+
+Uploads
+
+Pre-signed Upload URLs
+
+-------------------------------------------------------------------------------
+
+Downloads
+
+Pre-signed Download URLs
+
+-------------------------------------------------------------------------------
+
+IAM
+
+Least Privilege Policies
+
+===============================================================================
+11. ADMINISTRATION
+===============================================================================
+
+Administrator Dashboard
+
+Provides
+
+• Platform Statistics
+
+• Processing Status
+
+• Recent Activity
+
+• Global Document Browser
+
+• Audit Information
+
+-------------------------------------------------------------------------------
+
+Daily Report
+
+EventBridge
+
+       |
+
+       |
+
+Reporting Lambda
+
+       |
+
+       |
+
+Collect Statistics
+
+       |
+
+       |
+
+Collect Audit Events
+
+       |
+
+       |
+
+Generate Report
+
+       |
+
+       |
+
+SNS Email
+
+===============================================================================
+12. MONITORING
+===============================================================================
+
+CloudWatch Logs
+
+Used by every Lambda.
+
+-------------------------------------------------------------------------------
+
+CloudWatch Metrics
+
+Used for
+
+• Invocation Count
+
+• Errors
+
+• Duration
+
+-------------------------------------------------------------------------------
+
+Processing Metrics
+
+Tracked
+
+• Documents Processing
+
+• Failed Processing
+
+• Successful Processing
+
+===============================================================================
+13. ERROR RECOVERY
+===============================================================================
+
+Upload Failure
+
+↓
+
+Temporary Upload Deleted
+
+-------------------------------------------------------------------------------
+
+Metadata Failure
+
+↓
+
+Retry
+
+-------------------------------------------------------------------------------
+
+AI Failure
+
+↓
+
+Document Status = FAILED
+
+↓
+
+Retry Supported
+
+-------------------------------------------------------------------------------
+
+Lambda Failure
+
+↓
+
+Automatic Retry
+
+-------------------------------------------------------------------------------
+
+SQS
+
+Ensures reliable asynchronous processing.
+
+===============================================================================
+14. DEPLOYMENT ARCHITECTURE
+===============================================================================
+
+Infrastructure is provisioned entirely through Terraform.
+
+Modules
+
+• Frontend
+
+• API Gateway
+
+• Cognito
+
+• Lambda
+
+• DynamoDB
+
+• S3
+
+• SNS
+
+• SQS
+
+• CloudWatch
+
+• EventBridge
+
+Each module remains independently deployable.
+
+===============================================================================
+15. FUTURE EXTENSIBILITY
+===============================================================================
+
+The architecture allows future integration of
+
+• Redis
+
+• OpenSearch
+
+• Semantic Search
+
+• AI Question Answering
+
+• Related Document Recommendations
+
+without requiring significant architectural changes.
+
+===============================================================================
+16. DESIGN PRINCIPLES
+===============================================================================
+
+KnowledgeHub follows the following architectural principles.
+
+• Serverless First
+
+• Event-Driven Architecture
+
+• Single Table DynamoDB Design
+
+• Immutable Version History
+
+• Direct Browser-to-S3 Uploads
+
+• Asynchronous AI Processing
+
+• Infrastructure as Code
+
+• Least Privilege Security
+
+• Separation of Concerns
+
+• Horizontal Scalability
+
+===============================================================================
+END OF DOCUMENT
+===============================================================================

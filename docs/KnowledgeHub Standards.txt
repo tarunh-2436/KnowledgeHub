@@ -1,0 +1,390 @@
+===============================================================================
+PROJECT STANDARDS
+===============================================================================
+
+Project
+-------
+KnowledgeHub
+
+Subtitle
+--------
+AI-Powered Enterprise Knowledge Management Platform
+
+Version
+-------
+1.0
+
+Purpose
+-------
+This document defines the naming conventions, formatting standards and
+development guidelines that will be followed throughout the project.
+
+The objective is to ensure consistency across the architecture,
+implementation, APIs and infrastructure.
+
+===============================================================================
+1. GENERAL STANDARDS
+===============================================================================
+
+Programming Language
+
+• Python 3.13
+
+Infrastructure
+
+• Terraform
+
+Frontend
+
+• HTML
+• CSS
+• Vanilla JavaScript
+
+Backend
+
+• AWS Serverless Architecture
+
+Database
+
+• Amazon DynamoDB (Single Table Design)
+
+-------------------------------------------------------------------------------
+Timestamp Format
+-------------------------------------------------------------------------------
+
+All timestamps shall be stored in ISO 8601 UTC format.
+
+Example
+
+2026-07-03T09:35:42Z
+
+-------------------------------------------------------------------------------
+UUID Format
+-------------------------------------------------------------------------------
+
+Document IDs
+
+UUID Version 4
+
+Example
+
+550e8400-e29b-41d4-a716-446655440000
+
+Upload IDs
+
+UUID Version 4
+
+Audit IDs
+
+UUID Version 4
+
+===============================================================================
+2. DYNAMODB STANDARDS
+===============================================================================
+
+Primary Key Prefixes
+
+Document
+
+PK = DOC#<documentId>
+
+------------------------------------------------
+
+Sort Keys
+
+DOCUMENT
+
+VERSION#000001
+
+VERSION#000002
+
+VERSION#000003
+
+SHARE#<userId>
+
+AUDIT#<timestamp>
+
+-------------------------------------------------------------------------------
+Statistics Records
+-------------------------------------------------------------------------------
+
+SYSTEM#PLATFORM
+
+SYSTEM#PROCESSING
+
+SYSTEM#USERS
+
+-------------------------------------------------------------------------------
+Version Number Format
+-------------------------------------------------------------------------------
+
+Versions shall be zero padded.
+
+Examples
+
+VERSION#000001
+
+VERSION#000002
+
+VERSION#000010
+
+VERSION#000125
+
+This ensures correct lexical ordering.
+
+===============================================================================
+3. AMAZON S3 STANDARDS
+===============================================================================
+
+Temporary Upload Location
+
+uploads/
+
+    <ownerId>/
+
+        <documentId>/
+
+            <uploadId>
+
+------------------------------------------------
+
+Permanent Storage
+
+documents/
+
+    <documentId>/
+
+        v000001/
+
+            original_filename.pdf
+
+        v000002/
+
+            original_filename.pdf
+
+-------------------------------------------------------------------------------
+File Naming
+-------------------------------------------------------------------------------
+
+Original filenames shall be preserved.
+
+Document titles are independent of filenames.
+
+===============================================================================
+4. DOCUMENT STATUS
+===============================================================================
+
+Document Status
+
+PROCESSING
+
+READY
+
+FAILED
+
+------------------------------------------------
+
+Version Status
+
+PROCESSING
+
+READY
+
+FAILED
+
+No additional status values shall be used.
+
+===============================================================================
+5. AUDIT EVENT TYPES
+===============================================================================
+
+DOCUMENT_CREATED
+
+VERSION_CREATED
+
+DOCUMENT_RESTORED
+
+DOCUMENT_SHARED
+
+DOCUMENT_UNSHARED
+
+DOCUMENT_DELETED
+
+DOCUMENT_DOWNLOADED
+
+DOCUMENT_RENAMED
+
+TAGS_UPDATED
+
+AI_PROCESSING_QUEUED
+
+AI_PROCESSING_STARTED
+
+AI_PROCESSING_COMPLETED
+
+AI_PROCESSING_FAILED
+
+===============================================================================
+6. SHARING PERMISSIONS
+===============================================================================
+
+OWNER
+
+EDITOR
+
+VIEWER
+
+Permission names shall remain uppercase.
+
+===============================================================================
+7. API STANDARDS
+===============================================================================
+
+REST Naming Convention
+
+Collection
+
+/documents
+
+Individual Resource
+
+/documents/{documentId}
+
+Nested Resource
+
+/documents/{documentId}/versions
+
+/documents/{documentId}/shares
+
+-------------------------------------------------------------------------------
+HTTP Methods
+-------------------------------------------------------------------------------
+
+GET
+
+Retrieve resources
+
+POST
+
+Create resources
+
+PATCH
+
+Update partial resource
+
+DELETE
+
+Delete resources
+
+-------------------------------------------------------------------------------
+Authentication
+-------------------------------------------------------------------------------
+
+All protected APIs require JWT authentication through Amazon Cognito.
+
+===============================================================================
+8. ERROR RESPONSE FORMAT
+===============================================================================
+
+All API errors shall return
+
+{
+    "message": "...",
+    "code": "...",
+    "requestId": "..."
+}
+
+-------------------------------------------------------------------------------
+HTTP Status Codes
+-------------------------------------------------------------------------------
+
+200 OK
+
+201 Created
+
+204 No Content
+
+400 Bad Request
+
+401 Unauthorized
+
+403 Forbidden
+
+404 Not Found
+
+409 Conflict
+
+500 Internal Server Error
+
+===============================================================================
+9. SUCCESS RESPONSE FORMAT
+===============================================================================
+
+Every successful response shall follow a consistent JSON structure.
+
+Example
+
+{
+    "success": true,
+    "data": { }
+}
+
+===============================================================================
+10. DOCUMENT CONSTRAINTS
+===============================================================================
+
+Maximum Upload Size
+
+25 MB
+
+Supported File Types
+
+• PDF
+
+• DOCX
+
+• TXT
+
+• Markdown
+
+Unsupported files shall be rejected before upload.
+
+===============================================================================
+11. VERSIONING RULES
+===============================================================================
+
+Every uploaded file creates one immutable version.
+
+Versions shall never be modified.
+
+Versions shall never be overwritten.
+
+Restoring a version creates a brand-new version.
+
+Restored versions reference the original S3 object.
+
+===============================================================================
+12. DEVELOPMENT PRINCIPLES
+===============================================================================
+
+• Serverless First
+
+• Event-Driven Processing
+
+• Infrastructure as Code
+
+• Least Privilege Security
+
+• Immutable Version History
+
+• Single Table DynamoDB Design
+
+• Direct Browser-to-S3 Uploads
+
+• AI Processing Asynchronously
+
+• Production-Oriented Architecture
+
+===============================================================================
+END OF DOCUMENT
+===============================================================================

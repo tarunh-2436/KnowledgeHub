@@ -1,0 +1,811 @@
+===============================================================================
+DATABASE DESIGN & API SPECIFICATION
+===============================================================================
+
+Project Name
+------------
+KnowledgeHub
+
+Project Description
+-------------------
+AI-Powered Enterprise Knowledge Management Platform
+
+Version
+-------
+1.0
+
+Document Status
+---------------
+Final
+
+===============================================================================
+1. PURPOSE
+===============================================================================
+
+This document defines the backend design of KnowledgeHub.
+
+It specifies
+
+• Access Patterns
+• DynamoDB Single Table Design
+• Entity Models
+• Index Design
+• REST API Specification
+• Transaction Design
+
+The objective is to design the database around application access patterns
+instead of relational entities.
+
+===============================================================================
+2. DATABASE PHILOSOPHY
+===============================================================================
+
+KnowledgeHub uses a Single Table Design in Amazon DynamoDB.
+
+The design follows an aggregate-root approach.
+
+Each document acts as the aggregate root.
+
+All data related to a document is stored within the same partition.
+
+This minimizes cross-partition queries and allows complete document retrieval
+using a single partition query.
+
+===============================================================================
+3. ENTITY MODEL
+===============================================================================
+
+The database contains five logical entities.
+
+Document
+
+Represents the logical document.
+
+Mutable.
+
+------------------------------------------------
+
+Version
+
+Represents one immutable uploaded revision.
+
+Immutable.
+
+------------------------------------------------
+
+Share
+
+Represents document sharing permissions.
+
+Mutable.
+
+------------------------------------------------
+
+Audit
+
+Represents immutable audit events.
+
+Immutable.
+
+------------------------------------------------
+
+Statistics
+
+Represents system-wide operational statistics.
+
+Mutable.
+
+===============================================================================
+4. ACCESS PATTERNS
+===============================================================================
+
+USER ACCESS PATTERNS
+
+AP-001
+
+Retrieve all documents owned by a user.
+
+------------------------------------------------
+
+AP-002
+
+Retrieve all documents shared with a user.
+
+------------------------------------------------
+
+AP-003
+
+Retrieve a document.
+
+------------------------------------------------
+
+AP-004
+
+Retrieve complete version history.
+
+------------------------------------------------
+
+AP-005
+
+Retrieve a specific version.
+
+------------------------------------------------
+
+AP-006
+
+Update document title.
+
+------------------------------------------------
+
+AP-007
+
+Update document tags.
+
+------------------------------------------------
+
+AP-008
+
+Share document.
+
+------------------------------------------------
+
+AP-009
+
+Remove sharing.
+
+------------------------------------------------
+
+AP-010
+
+Retrieve users with access.
+
+------------------------------------------------
+
+AP-011
+
+Delete document.
+
+------------------------------------------------
+
+AP-012
+
+Retrieve document audit history.
+
+-------------------------------------------------------------------------------
+
+PROCESSOR ACCESS PATTERNS
+
+AP-101
+
+Create new document.
+
+------------------------------------------------
+
+AP-102
+
+Create document version.
+
+------------------------------------------------
+
+AP-103
+
+Assign next version number.
+
+------------------------------------------------
+
+AP-104
+
+Update document metadata.
+
+------------------------------------------------
+
+AP-105
+
+Update version metadata.
+
+------------------------------------------------
+
+AP-106
+
+Create audit record.
+
+------------------------------------------------
+
+AP-107
+
+Update statistics.
+
+-------------------------------------------------------------------------------
+
+ADMIN ACCESS PATTERNS
+
+AP-201
+
+Retrieve platform statistics.
+
+------------------------------------------------
+
+AP-202
+
+Retrieve all documents.
+
+------------------------------------------------
+
+AP-203
+
+Retrieve documents currently processing.
+
+------------------------------------------------
+
+AP-204
+
+Delete document.
+
+-------------------------------------------------------------------------------
+
+REPORTING ACCESS PATTERNS
+
+AP-301
+
+Retrieve audit events within a time period.
+
+------------------------------------------------
+
+AP-302
+
+Retrieve platform statistics.
+
+===============================================================================
+5. PRIMARY KEY DESIGN
+===============================================================================
+
+Partition Key
+
+PK = DOC#<documentId>
+
+-------------------------------------------------------------------------------
+
+Sort Keys
+
+DOCUMENT
+
+VERSION#000001
+
+VERSION#000002
+
+VERSION#000003
+
+SHARE#<userId>
+
+AUDIT#<timestamp>
+
+Every document partition contains all related entities.
+
+===============================================================================
+6. ENTITY SCHEMAS
+===============================================================================
+
+DOCUMENT
+
+Fields
+
+documentId
+
+ownerId
+
+title
+
+tags
+
+latestVersion
+
+currentVersion
+
+processingStatus
+
+createdAt
+
+updatedAt
+
+ownerName (optional)
+
+-------------------------------------------------------------------------------
+
+VERSION
+
+Fields
+
+versionNumber
+
+filename
+
+contentType
+
+fileSize
+
+s3Key
+
+summary
+
+keywords
+
+versionNotes
+
+processingStatus
+
+createdAt
+
+uploadedBy
+
+restoredFrom
+
+-------------------------------------------------------------------------------
+
+SHARE
+
+Fields
+
+sharedUserId
+
+permission
+
+createdAt
+
+sharedBy
+
+-------------------------------------------------------------------------------
+
+AUDIT
+
+Fields
+
+auditId
+
+eventType
+
+performedBy
+
+documentId
+
+versionNumber
+
+timestamp
+
+details
+
+-------------------------------------------------------------------------------
+
+STATISTICS
+
+Fields
+
+totalDocuments
+
+totalVersions
+
+storageUsed
+
+registeredUsers
+
+activeShares
+
+failedProcessing
+
+===============================================================================
+7. GLOBAL SECONDARY INDEXES
+===============================================================================
+
+GSI 1
+
+Purpose
+
+Retrieve documents owned by a user.
+
+Partition Key
+
+OWNER#<ownerId>
+
+Sort Key
+
+updatedAt
+
+-------------------------------------------------------------------------------
+
+GSI 2
+
+Purpose
+
+Retrieve documents shared with a user.
+
+Partition Key
+
+SHARED#<userId>
+
+Sort Key
+
+updatedAt
+
+-------------------------------------------------------------------------------
+
+GSI 3
+
+Purpose
+
+Administrator document browser.
+
+Partition Key
+
+DOCUMENT
+
+Sort Key
+
+updatedAt
+
+-------------------------------------------------------------------------------
+
+GSI 4
+
+Purpose
+
+Retrieve processing documents.
+
+Partition Key
+
+status
+
+Sort Key
+
+updatedAt
+
+Only document records shall be projected into GSIs.
+
+Versions, shares and audit records shall remain inside the primary partition.
+
+===============================================================================
+8. API SPECIFICATION
+===============================================================================
+
+Authentication
+
+All protected APIs require JWT authentication.
+
+-------------------------------------------------------------------------------
+
+DOCUMENTS
+
+POST /documents
+
+Create upload URL for a new document.
+
+------------------------------------------------
+
+GET /documents
+
+Retrieve owned documents.
+
+------------------------------------------------
+
+GET /documents/shared
+
+Retrieve shared documents.
+
+------------------------------------------------
+
+GET /documents/{documentId}
+
+Retrieve document metadata.
+
+------------------------------------------------
+
+PATCH /documents/{documentId}
+
+Update title or tags.
+
+------------------------------------------------
+
+DELETE /documents/{documentId}
+
+Delete document.
+
+===============================================================================
+
+VERSIONS
+
+POST /documents/{documentId}/versions
+
+Upload a new version.
+
+------------------------------------------------
+
+GET /documents/{documentId}/versions
+
+Retrieve version history.
+
+------------------------------------------------
+
+GET /documents/{documentId}/versions/{versionNumber}
+
+Retrieve one version.
+
+------------------------------------------------
+
+POST /documents/{documentId}/versions/{versionNumber}/restore
+
+Restore version.
+
+===============================================================================
+
+SHARING
+
+POST /documents/{documentId}/shares
+
+Share document.
+
+------------------------------------------------
+
+GET /documents/{documentId}/shares
+
+Retrieve sharing list.
+
+------------------------------------------------
+
+DELETE /documents/{documentId}/shares/{userId}
+
+Remove sharing.
+
+===============================================================================
+
+AUDIT
+
+GET /documents/{documentId}/audit
+
+Retrieve audit history.
+
+===============================================================================
+
+ADMIN
+
+GET /admin/statistics
+
+Retrieve platform statistics.
+
+------------------------------------------------
+
+GET /admin/documents
+
+Retrieve all documents.
+
+------------------------------------------------
+
+GET /admin/processing
+
+Retrieve processing documents.
+
+===============================================================================
+9. TRANSACTION DESIGN
+===============================================================================
+
+New Document Upload
+
+1.
+
+Generate
+
+Document ID
+
+Upload ID
+
+Pre-signed URL
+
+2.
+
+Upload to temporary S3 location.
+
+3.
+
+S3 ObjectCreated event.
+
+4.
+
+SQS.
+
+5.
+
+Ingestion Lambda.
+
+6.
+
+Assign Version 1.
+
+7.
+
+Move object to permanent storage.
+
+8.
+
+Create document metadata.
+
+9.
+
+Create version metadata.
+
+10.
+
+Create audit record.
+
+11.
+
+Update statistics.
+
+12.
+
+Publish processing message.
+
+-------------------------------------------------------------------------------
+
+New Version Upload
+
+1.
+
+Upload temporary object.
+
+2.
+
+Ingestion Lambda.
+
+3.
+
+Atomically increment latestVersion.
+
+4.
+
+Assign version.
+
+5.
+
+Move object.
+
+6.
+
+Create version metadata.
+
+7.
+
+Update document.
+
+8.
+
+Audit.
+
+9.
+
+Statistics.
+
+10.
+
+Publish processing message.
+
+-------------------------------------------------------------------------------
+
+AI Processing
+
+1.
+
+Receive processing message.
+
+2.
+
+Extract text.
+
+3.
+
+Generate summary.
+
+4.
+
+Generate keywords.
+
+5.
+
+Update version metadata.
+
+6.
+
+Update document status.
+
+7.
+
+Notify user.
+
+===============================================================================
+10. CONCURRENCY CONTROL
+===============================================================================
+
+The upload API never assigns version numbers.
+
+Version numbers are assigned only by the Ingestion Lambda.
+
+The Ingestion Lambda uses optimistic concurrency through DynamoDB
+conditional updates when assigning version numbers.
+
+Version numbers are allocated only after the uploaded object has been
+validated.
+
+This guarantees sequential version numbers even during concurrent uploads.
+Concurrent uploads shall automatically receive unique sequential version
+numbers.
+
+===============================================================================
+11. STORAGE STRATEGY
+===============================================================================
+
+Temporary Uploads
+
+uploads/{ownerId}/{documentId}/{uploadId}
+
+-------------------------------------------------------------------------------
+
+Permanent Storage
+
+documents/{documentId}/v000001/
+
+documents/{documentId}/v000002/
+
+documents/{documentId}/v000003/
+
+Original filenames shall be preserved.
+
+===============================================================================
+12. FAILURE HANDLING
+===============================================================================
+
+If upload validation fails
+
+↓
+
+Temporary upload deleted.
+
+-------------------------------------------------------------------------------
+
+If AI processing fails
+
+↓
+
+Document remains.
+
+↓
+
+Status becomes FAILED.
+
+-------------------------------------------------------------------------------
+
+If metadata creation fails
+
+↓
+
+Temporary upload deleted.
+
+↓
+
+Operation retried.
+
+===============================================================================
+ATOMIC OPERATIONS
+===============================================================================
+
+The following operations shall be executed atomically.
+
+• Version number assignment
+
+• Document metadata creation
+
+• Version metadata creation
+
+If any operation fails before completion, no partial metadata shall remain.
+
+Document metadata shall only become visible after successful completion of the
+ingestion stage.
+
+===============================================================================
+END OF DOCUMENT
+===============================================================================
