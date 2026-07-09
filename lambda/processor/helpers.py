@@ -1,47 +1,33 @@
 import io
 import os
-import re
-from collections import Counter
+
+import nltk
+import yake
+
+from datetime import datetime, timezone
 
 from docx import Document
 from pypdf import PdfReader
 
-from datetime import datetime, timezone
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.summarizers.lsa import LsaSummarizer
 
-STOP_WORDS = {
-    "a",
-    "an",
-    "the",
-    "and",
-    "or",
-    "of",
-    "to",
-    "in",
-    "on",
-    "for",
-    "with",
-    "is",
-    "are",
-    "was",
-    "were",
-    "be",
-    "been",
-    "this",
-    "that",
-    "it",
-    "as",
-    "by",
-    "at",
-    "from",
-    "into",
-    "have",
-    "has",
-    "had",
-    "will",
-    "would",
-    "can",
-    "could",
-}
+# ------------------------------------------------------------------
+# Configure NLTK
+# ------------------------------------------------------------------
+
+nltk.data.path = [
+    os.path.join(
+        os.path.dirname(__file__),
+        "tokenizers",
+    )
+]
+
+
+# ------------------------------------------------------------------
+# Text Extraction
+# ------------------------------------------------------------------
 
 
 def extract_pdf_text(file_bytes):
@@ -51,17 +37,17 @@ def extract_pdf_text(file_bytes):
 
     reader = PdfReader(io.BytesIO(file_bytes))
 
-    text = []
+    pages = []
 
     for page in reader.pages:
 
-        page_text = page.extract_text()
+        text = page.extract_text()
 
-        if page_text:
+        if text:
 
-            text.append(page_text)
+            pages.append(text)
 
-    return "\n".join(text).strip()
+    return "\n".join(pages).strip()
 
 
 def extract_docx_text(file_bytes):
@@ -78,13 +64,18 @@ def extract_docx_text(file_bytes):
 
 def extract_plain_text(file_bytes):
     """
-    Extract text from TXT and Markdown documents.
+    Extract text from TXT / Markdown.
     """
 
     return file_bytes.decode(
         "utf-8",
         errors="ignore",
     )
+
+
+# ------------------------------------------------------------------
+# Cleaning
+# ------------------------------------------------------------------
 
 
 def normalize_text(text):
@@ -95,75 +86,83 @@ def normalize_text(text):
     text = text.replace("\r\n", "\n")
     text = text.replace("\r", "\n")
 
-    text = re.sub(
-        r"\n+",
-        "\n",
-        text,
-    )
+    lines = []
 
-    text = re.sub(
-        r"[ \t]+",
-        " ",
-        text,
-    )
+    for line in text.splitlines():
 
-    return text.strip()
+        line = line.strip()
+
+        if not line:
+            continue
+
+        lines.append(line)
+
+    return "\n".join(lines)
 
 
-def summarize_text(text, max_sentences=5):
+# ------------------------------------------------------------------
+# Summarization
+# ------------------------------------------------------------------
 
-    if not text:
+
+def summarize_text(
+    text,
+    sentence_count=5,
+):
+    """
+    Generate document summary using Sumy's LSA summarizer.
+    """
+
+    if not text.strip():
         return ""
 
-    text = re.sub(r"\s+", " ", text)
+    parser = PlaintextParser.from_string(
+        text,
+        Tokenizer("english"),
+    )
 
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    summarizer = LsaSummarizer()
 
-    if len(sentences) <= max_sentences:
-        return text
+    summary = summarizer(
+        parser.document,
+        sentence_count,
+    )
 
-    words = re.findall(r"[A-Za-z]+", text.lower())
-
-    frequencies = Counter(word for word in words if word not in STOP_WORDS)
-
-    scored = []
-
-    for index, sentence in enumerate(sentences):
-
-        score = sum(
-            frequencies[word] for word in re.findall(r"[A-Za-z]+", sentence.lower())
-        )
-
-        scored.append(
-            (
-                index,
-                score,
-                sentence,
-            )
-        )
-
-    best = sorted(
-        scored,
-        key=lambda x: x[1],
-        reverse=True,
-    )[:max_sentences]
-
-    best.sort(key=lambda x: x[0])
-
-    return " ".join(sentence for _, _, sentence in best)
+    return " ".join(str(sentence) for sentence in summary)
 
 
-def generate_keywords(text, max_keywords=10):
+# ------------------------------------------------------------------
+# Keywords
+# ------------------------------------------------------------------
+
+
+def generate_keywords(
+    text,
+    max_keywords=10,
+):
     """
-    Generate keywords using simple word frequency.
+    Generate keywords using YAKE.
     """
 
-    words = re.findall(r"[A-Za-z]{3,}", text.lower())
+    if not text.strip():
+        return []
 
-    frequencies = Counter(word for word in words if word not in STOP_WORDS)
+    extractor = yake.KeywordExtractor(
+        lan="en",
+        n=2,
+        top=max_keywords,
+        dedupLim=0.9,
+    )
 
-    return [word for word, _ in frequencies.most_common(max_keywords)]
+    return [keyword for keyword, _ in extractor.extract_keywords(text)]
+
+
+# ------------------------------------------------------------------
+# Timestamp
+# ------------------------------------------------------------------
 
 
 def get_current_timestamp():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(
+        timezone.utc,
+    ).isoformat()

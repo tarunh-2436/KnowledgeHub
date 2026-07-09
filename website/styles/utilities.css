@@ -4,6 +4,8 @@
 
 .subtle {
   color: var(--text-subtle);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .text-right {

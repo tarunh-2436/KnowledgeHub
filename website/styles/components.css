@@ -354,6 +354,10 @@
   align-items: start;
 }
 
+.content-grid > .stack-lg {
+    min-width: 0;
+}
+
 .document-grid {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
@@ -540,9 +544,9 @@
 }
 
 .data-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 760px;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .data-table th,
@@ -551,6 +555,14 @@
   padding: 13px 14px;
   text-align: left;
   vertical-align: middle;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.data-table td:last-child,
+.data-table th:last-child {
+    white-space: nowrap;
+    width: 160px;
 }
 
 .data-table th {
