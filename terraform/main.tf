@@ -402,7 +402,8 @@ resource "aws_iam_policy" "api_lambda_policy" {
           "dynamodb:Query",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem"
+          "dynamodb:DeleteItem",
+          "dynamodb:BatchWriteItem",
         ]
 
         Resource = [
