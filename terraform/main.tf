@@ -174,6 +174,53 @@ resource "aws_s3_bucket_lifecycle_configuration" "log_archive_retention" {
   }
 }
 
+resource "aws_s3_bucket_policy" "log_archive_bucket_policy" {
+
+  bucket = module.log_archive_bucket.bucket_id
+
+  policy = jsonencode({
+
+    Version = "2012-10-17"
+
+    Statement = [
+
+      {
+        Sid    = "CloudWatchLogsAclCheck"
+        Effect = "Allow"
+
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+
+        Action = "s3:GetBucketAcl"
+
+        Resource = module.log_archive_bucket.bucket_arn
+      },
+
+      {
+        Sid    = "CloudWatchLogsWrite"
+        Effect = "Allow"
+
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+
+        Action = "s3:PutObject"
+
+        Resource = "${module.log_archive_bucket.bucket_arn}/*"
+
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+
+    ]
+
+  })
+}
+
 ###############################################################################
 # DynamoDB
 ###############################################################################
@@ -336,15 +383,15 @@ resource "aws_iam_policy" "api_lambda_policy" {
       },
 
       {
-        "Effect": "Allow",
+        "Effect" : "Allow",
 
-        "Action": [
+        "Action" : [
           "sns:ListSubscriptionsByTopic",
           "sns:Subscribe"
         ],
 
-        "Resource": module.notifications_topic.topic_arn
-      },      
+        "Resource" : module.notifications_topic.topic_arn
+      },
 
       {
         Sid    = "DatabaseActions"
@@ -389,16 +436,16 @@ resource "aws_iam_policy" "api_lambda_policy" {
       },
 
       {
-        "Sid": "CognitoLookup",
-        "Effect": "Allow",
+        "Sid" : "CognitoLookup",
+        "Effect" : "Allow",
 
-        "Action": [
+        "Action" : [
           "cognito-idp:ListUsers",
           "cognito-idp:AdminGetUser",
         ],
-        
-        "Resource": module.cognito.user_pool_arn
-      }      
+
+        "Resource" : module.cognito.user_pool_arn
+      }
 
     ]
   })
@@ -528,7 +575,7 @@ resource "aws_iam_policy" "ingestion_lambda_policy" {
       },
 
       {
-        Sid ="ListStorageBucket"
+        Sid    = "ListStorageBucket"
         Effect = "Allow"
 
         Action = [
@@ -1094,6 +1141,7 @@ resource "aws_iam_policy" "maintenance_lambda_policy" {
         Effect = "Allow"
 
         Action = [
+          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
@@ -1108,10 +1156,28 @@ resource "aws_iam_policy" "maintenance_lambda_policy" {
 
         Action = [
           "logs:CreateExportTask",
-          "logs:DescribeExportTasks"
+          "logs:DescribeExportTasks",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
         ]
 
         Resource = "*"
+      },
+
+      {
+        Sid = "LogArchive"
+
+        Effect = "Allow"
+
+        Action = [
+          "s3:PutObject",
+          "s3:GetBucketLocation"
+        ]
+
+        Resource = [
+          module.log_archive_bucket.bucket_arn,
+          "${module.log_archive_bucket.bucket_arn}/*"
+        ]
       },
 
       {
@@ -1133,7 +1199,6 @@ resource "aws_iam_policy" "maintenance_lambda_policy" {
 
         Action = [
           "sns:ListSubscriptionsByTopic",
-          "sns:Subscribe",
           "sns:Unsubscribe"
         ]
 
@@ -1174,6 +1239,8 @@ module "maintenance_lambda" {
     ADMIN_GROUP = "admins"
 
     SNS_TOPIC_ARN = module.notifications_topic.topic_arn
+
+    LOG_GROUP = "/aws/lambda/${local.project_name}-api"
 
   }
 
