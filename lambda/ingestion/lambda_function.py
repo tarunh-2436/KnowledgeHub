@@ -461,6 +461,7 @@ def process_restore(pending):
             next_version=next_version,
             updated_at=pending["updatedAt"],
             version_item=restored_version,
+            restore_call=True,
         )
 
         transaction_completed = True

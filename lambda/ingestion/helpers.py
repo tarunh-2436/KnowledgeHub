@@ -92,6 +92,7 @@ def transact_create_version(
     next_version,
     updated_at,
     version_item,
+    restore_call=False,
 ):
     """
     Atomically:
@@ -123,7 +124,11 @@ def transact_create_version(
                     "ExpressionAttributeValues": {
                         ":expected": serializer.serialize(current_version),
                         ":next": serializer.serialize(next_version),
-                        ":status": serializer.serialize("PROCESSING"),
+                        ":status": (
+                            serializer.serialize("PROCESSING")
+                            if not restore_call
+                            else serializer.serialize("READY")
+                        ),
                         ":updatedAt": serializer.serialize(updated_at),
                     },
                 }
